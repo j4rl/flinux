@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <title>Terminal — en bakgrund för flinux</title>
+  <defs>
+    <radialGradient id="base" cx="80%" cy="70%" r="90%"><stop stop-color="#173a31"/><stop offset="1" stop-color="#0a1918"/></radialGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse"><path d="M64 0H0v64" fill="none" stroke="#86b48b" stroke-opacity=".055" stroke-width="1"/><circle r="1" fill="#8abe8e" fill-opacity=".12"/></pattern>
+    <path id="contour" d="M1418 1570c-47-207 29-336 150-411s104-191 168-277 171-64 254-146 156-105 258-56 260 60 389-56"/>
+  </defs>
+  <path fill="url(#base)" d="M0 0h2560v1440H0z"/>
+  <path fill="url(#grid)" d="M0 0h2560v1440H0z"/>
+  <g fill="none" stroke="#a0c685" stroke-opacity=".13" stroke-width="1.2">
+    <use href="#contour"/><use href="#contour" transform="translate(25 24)"/><use href="#contour" transform="translate(50 48)"/><use href="#contour" transform="translate(75 72)"/><use href="#contour" transform="translate(100 96)"/><use href="#contour" transform="translate(125 120)"/><use href="#contour" transform="translate(150 144)"/><use href="#contour" transform="translate(175 168)"/><use href="#contour" transform="translate(200 192)"/><use href="#contour" transform="translate(225 216)"/><use href="#contour" transform="translate(250 240)"/><use href="#contour" transform="translate(-25 -24)"/><use href="#contour" transform="translate(-50 -48)"/><use href="#contour" transform="translate(-75 -72)"/><use href="#contour" transform="translate(-100 -96)"/><use href="#contour" transform="translate(-125 -120)"/><use href="#contour" transform="translate(-150 -144)"/><use href="#contour" transform="translate(-175 -168)"/><use href="#contour" transform="translate(-200 -192)"/><use href="#contour" transform="translate(-225 -216)"/><use href="#contour" transform="translate(-250 -240)"/>
+  </g>
+  <g fill="none" stroke="#c1df9d" stroke-opacity=".35" stroke-width="1.3"><circle cx="2067" cy="477" r="7"/><path d="M2067 460v-5m0 39v5m-17-22h-5m39 0h5"/></g>
+</svg>

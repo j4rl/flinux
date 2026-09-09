@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <title>Glimten — en bakgrund för flinux</title>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0c2024"/><stop offset=".55" stop-color="#143d3f"/><stop offset="1" stop-color="#426e60"/></linearGradient>
+    <radialGradient id="light" cx="87%" cy="62%" r="65%"><stop stop-color="#8dab70" stop-opacity=".27"/><stop offset="1" stop-color="#6eaa8c" stop-opacity="0"/></radialGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#88a98a"/><stop offset="1" stop-color="#4d7c69"/></linearGradient>
+    <linearGradient id="middle" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#366d62"/><stop offset="1" stop-color="#1e574e"/></linearGradient>
+    <linearGradient id="front" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#174e49"/><stop offset="1" stop-color="#0c3334"/></linearGradient>
+    <linearGradient id="sun" x2="0" y2="1"><stop stop-color="#f1daa0"/><stop offset="1" stop-color="#d8b77b"/></linearGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".78" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".032"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+  </defs>
+  <g filter="url(#grain)">
+    <path fill="url(#sky)" d="M0 0h2560v1440H0z"/>
+    <path fill="url(#light)" d="M0 0h2560v1440H0z"/>
+    <circle cx="2093" cy="622" r="91" fill="url(#sun)"/>
+    <circle cx="2093" cy="622" r="112" fill="none" stroke="#c9d5a4" stroke-opacity=".12"/>
+    <path d="M1157 1440c119-212 240-377 407-423 152-42 224-137 313-214 90-77 164-59 260-101 170-75 283-118 423-109v847z" fill="url(#far)"/>
+    <path d="M2560 600c-131-7-253 31-421 107-91 41-170 27-258 101-106 89-171 173-314 216-174 51-287 209-408 416" fill="none" stroke="#c6d7a7" stroke-opacity=".17" stroke-width="2"/>
+    <path d="M1050 1440c174-38 327-50 474-154 183-130 194-290 364-337 175-49 339 18 469-33 72-28 145-79 203-140v664z" fill="url(#middle)"/>
+    <path d="M1391 1440c114-137 155-321 338-318 135 2 178 74 335 11 155-62 305-149 496-83v390z" fill="url(#front)"/>
+    <path d="M1842 1440c54-109 149-126 270-103 145 28 265-29 448-180v283z" fill="#123b39"/>
+    <path d="M1817 863c-80 77-115 114-172 136m583-251c-53 20-87 24-123 27" fill="none" stroke="#d6e3b8" stroke-opacity=".15" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <g fill="#d3e6cf" opacity=".3"><circle cx="1788" cy="270" r="1.5"/><circle cx="2335" cy="334" r="1.5"/><circle cx="1325" cy="397" r="1"/><circle cx="1946" cy="151" r="1"/></g>
+</svg>

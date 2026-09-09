@@ -1,0 +1,15 @@
+{
+  "name": "flinux",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Det glada linuxet – en Linux-simulator i webbläsaren",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

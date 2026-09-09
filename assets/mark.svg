@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">flinux</title>
+  <desc id="desc">En mintgrön ikon med en liten glad pingvin. Det glada linuxet.</desc>
+  <defs><linearGradient id="mint" x2="1" y2="1"><stop stop-color="#ddf6ba"/><stop offset="1" stop-color="#92d7bc"/></linearGradient></defs>
+  <rect width="128" height="128" rx="35" fill="url(#mint)"/>
+  <path d="M31 79c-1-10 1-18 7-25V45c0-15 12-26 26-26s26 11 26 26v9c6 7 8 15 7 25l-7-4c-1 18-10 31-26 31S39 93 38 75z" fill="#153d37"/>
+  <path d="M43 74c0-11 5-20 11-26 3 4 6 7 10 7s7-3 10-7c6 6 11 15 11 26 0 13-9 22-21 22s-21-9-21-22" fill="#f4f5df"/>
+  <path d="M48 40c0-3 2-5 5-5s5 2 5 5m12 0c0-3 2-5 5-5s5 2 5 5" fill="none" stroke="#f4f5df" stroke-width="4" stroke-linecap="round"/>
+  <path d="M58 48h12l-6 7z" fill="#efa461"/>
+  <path d="M54 74c2 5 5 7 10 7s8-2 10-7" fill="none" stroke="#153d37" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M45 99h13m12 0h13" stroke="#e9a35f" stroke-width="9" stroke-linecap="round"/>
+</svg>

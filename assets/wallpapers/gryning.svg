@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1440" viewBox="0 0 2560 1440">
+  <title>Gryning — en bakgrund för flinux</title>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#9aaca1"/><stop offset=".59" stop-color="#d1c8ab"/><stop offset="1" stop-color="#e6c697"/></linearGradient>
+    <radialGradient id="glow" cx="75%" cy="49%" r="45%"><stop stop-color="#fff4c2" stop-opacity=".5"/><stop offset="1" stop-color="#eedab4" stop-opacity="0"/></radialGradient>
+    <linearGradient id="hill" x2="0" y2="1"><stop stop-color="#687e75"/><stop offset="1" stop-color="#445f57"/></linearGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".66" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".026"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+  </defs>
+  <g filter="url(#grain)">
+    <path fill="url(#sky)" d="M0 0h2560v1440H0z"/>
+    <path fill="url(#glow)" d="M0 0h2560v1440H0z"/>
+    <circle cx="1920" cy="606" r="100" fill="#f5dfac"/>
+    <path d="M0 986c284 23 503-79 726-56s361 84 599-18 380-157 562-117 442 13 673-80v725H0z" fill="#a0a491"/>
+    <path d="M0 1131c248-123 466-114 701-92s299-5 509-102c226-105 355-68 479 31s262 39 377-9 316-73 494-8v489H0z" fill="#8a9481"/>
+    <path d="M0 1110c288 27 441 223 761 219s501-251 757-244 363 137 569 92 299-86 473-50v313H0z" fill="url(#hill)"/>
+    <path d="M0 1325c206-48 448 118 728 115H0zm1379 115c196-107 307-63 551-80s401-96 630-150v230z" fill="#2c4c46"/>
+    <path d="M1672 1235c186 15 221 92 395 47s303-81 437-71" fill="none" stroke="#c1c4a0" stroke-opacity=".16" stroke-width="2"/>
+  </g>
+</svg>

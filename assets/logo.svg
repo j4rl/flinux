@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 408 128" role="img" aria-labelledby="title desc">
+  <title id="title">flinux — Det glada linuxet</title>
+  <desc id="desc">flinux logotyp: en glad pingvin och namnet flinux.</desc>
+  <rect y="8" width="112" height="112" rx="31" fill="#c4eea2"/>
+  <g transform="translate(0 8) scale(.875)">
+    <path d="M31 79c-1-10 1-18 7-25V45c0-15 12-26 26-26s26 11 26 26v9c6 7 8 15 7 25l-7-4c-1 18-10 31-26 31S39 93 38 75z" fill="#153d37"/>
+    <path d="M43 74c0-11 5-20 11-26 3 4 6 7 10 7s7-3 10-7c6 6 11 15 11 26 0 13-9 22-21 22s-21-9-21-22" fill="#f4f5df"/>
+    <path d="M48 40c0-3 2-5 5-5s5 2 5 5m12 0c0-3 2-5 5-5s5 2 5 5" fill="none" stroke="#f4f5df" stroke-width="4" stroke-linecap="round"/>
+    <path d="M58 48h12l-6 7z" fill="#efa461"/>
+    <path d="M54 74c2 5 5 7 10 7s8-2 10-7" fill="none" stroke="#153d37" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M45 99h13m12 0h13" stroke="#e9a35f" stroke-width="9" stroke-linecap="round"/>
+  </g>
+  <g fill="none" stroke="#edf4e9" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M147 78V43q0-16 17-16h4m-31 22h29M185 27v51m25-29v29M237 78V49m0 12q0-13 14-13t14 13v17M287 49v16q0 14 13 14t13-14V49m26 0 26 29m0-29-26 29"/>
+  </g>
+  <circle cx="210" cy="30" r="5.2" fill="#c4eea2"/>
+  <text x="135" y="111" fill="#b6c9bd" font-family="'Segoe UI',Arial,sans-serif" font-size="17" letter-spacing="1.05">Det glada linuxet</text>
+</svg>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#103c3c">
+  <meta name="description" content="flinux – Det glada linuxet. Ett lekfullt Linux-skrivbord med terminal, paket och fönsterhanterare, direkt i webbläsaren.">
+  <title>flinux — Det glada linuxet</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-desktop="plasma">
+  <main id="desktop" aria-label="flinux skrivbord">
+    <div class="desktop-wordmark" aria-hidden="true"><img src="assets/mark.svg" alt=""><span>flinux<small>Det glada linuxet</small></span></div>
+    <div class="desktop-caption" aria-hidden="true"><span>EN LITEN VÄRLD AV MÖJLIGHETER</span><b>Gör dig hemmastadd.</b><small>flinux 1.0 / Glimten</small></div>
+    <section id="desktop-icons" class="desktop-icons" aria-label="Skrivbordsikoner"></section>
+    <section id="window-layer" class="window-layer" aria-label="Öppna fönster"></section>
+    <aside id="launcher" class="launcher" aria-label="Programmeny" hidden>
+      <div class="launcher-head"><img src="assets/mark.svg" alt="" class="avatar"><div><strong>Hej, jarl.</strong><small>Vad vill du upptäcka idag?</small></div><span class="version-pill">1.0</span></div>
+      <label class="search-field"><svg class="ui-icon" aria-hidden="true"><use href="assets/icons.svg#search"></use></svg><input id="app-search" type="search" placeholder="Sök bland dina program…" autocomplete="off" aria-label="Sök program"></label>
+      <div class="launcher-content"><nav id="app-categories" class="app-categories" aria-label="Programkategorier"></nav><div id="app-grid" class="app-grid"></div></div>
+      <div class="launcher-foot"><span><i class="status-dot"></i> Alla system glada</span><button id="about-button" class="text-button">Om flinux ↗</button></div>
+    </aside>
+    <aside id="quick-settings" class="quick-settings" aria-label="Snabbinställningar" hidden></aside>
+    <div id="context-menu" class="context-menu" role="menu" hidden></div>
+    <footer class="panel">
+      <button id="launcher-button" class="launcher-button" aria-label="Öppna programmenyn" aria-expanded="false" aria-controls="launcher"><img src="assets/mark.svg" class="panel-logo" alt=""><span>flinux</span></button>
+      <div class="panel-divider"></div>
+      <nav id="pinned-apps" class="pinned-apps" aria-label="Fästa program"></nav>
+      <div id="taskbar" class="taskbar" aria-label="Öppna program"></div>
+      <nav id="workspaces" class="workspaces" aria-label="Arbetsytor"></nav>
+      <button id="tray-button" class="system-tray" aria-label="Öppna snabbinställningar" aria-expanded="false"><svg class="ui-icon" aria-hidden="true"><use href="assets/icons.svg#wifi"></use></svg><svg class="ui-icon" aria-hidden="true"><use href="assets/icons.svg#volume"></use></svg><time id="clock"></time></button>
+      <button id="show-desktop" class="show-desktop" aria-label="Visa skrivbordet" title="Visa skrivbordet"></button>
+    </footer>
+    <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+  </main>
+  <noscript>flinux behöver JavaScript för att starta.</noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
