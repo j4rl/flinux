@@ -128,7 +128,7 @@ export function createShellSession({ system, PACKAGE_REGISTRY = DEFAULT_REGISTRY
     whoami: () => line(currentUser), hostname: () => line(system.state.user.host),
     id: args => line(training.idText(args[0] || currentUser)),
     groups: args => line(training.groupsFor(args[0] || currentUser).join(' ')),
-    su: args => { setUser(args[0] || 'root'); return ''; },
+    su: args => { const target = args[0] || 'root'; if (target === 'root' && currentUser !== 'root') throw new Error('su: Authentication failure — lösenordsprompt simuleras inte; använd sudo för administrativa kommandon.'); setUser(target); return ''; },
     useradd: args => { training.requireRoot(currentUser, 'useradd'); const names = args.filter(a => !a.startsWith('-')); ensureArgs(names, 1, 'useradd [-m] NAMN'); training.addUser(names.at(-1), { createHome: args.includes('-m') }); return ''; },
     userdel: args => { training.requireRoot(currentUser, 'userdel'); const names = args.filter(a => !a.startsWith('-')); ensureArgs(names, 1, 'userdel [-r] NAMN'); training.deleteUser(names.at(-1), args.includes('-r')); return ''; },
     usermod: args => { training.requireRoot(currentUser, 'usermod'); const groupIndex = args.findIndex(a => a === '-G' || a === '-aG'); if (groupIndex < 0 || !args[groupIndex + 1] || !args.at(-1)) usage('usermod -aG GRUPP NAMN'); for (const group of args[groupIndex + 1].split(',')) training.addToGroup(args.at(-1), group); return ''; },
@@ -219,7 +219,7 @@ export function createShellSession({ system, PACKAGE_REGISTRY = DEFAULT_REGISTRY
     requirePackage('apache2'); if (!system.getService('apache2').active) throw new Error('curl: anslutningen nekades. Kör systemctl start apache2.');
     let request; try { request = decodeURIComponent(parsed.pathname); } catch { throw new Error('curl: ogiltig URL-kodning'); }
     const target = system.normalize('/var/www/html/' + request); if (target !== '/var/www/html' && !target.startsWith('/var/www/html/')) throw new Error('curl: 403 Forbidden');
-    return read(system.getNode(target)?.type === 'dir' ? target + '/index.html' : target);
+    return training.read(system.getNode(target)?.type === 'dir' ? target + '/index.html' : target, 'www-data');
   }
   function archive(args) {
     ensureArgs(args, 2, manuals.archive); const [action, archivePath, ...entries] = args;
