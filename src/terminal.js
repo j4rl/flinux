@@ -244,7 +244,8 @@ export function createShellSession({ system, PACKAGE_REGISTRY = DEFAULT_REGISTRY
   }
   return {
     get cwd() { return current; }, get history() { return [...history]; }, get exitCode() { return lastCode; },
-    get prompt() { const sigil = currentUser === 'root' ? '#' : '
+    get prompt() { const sigil = currentUser === 'root' ? '#' : '$'; return `${currentUser}@${system.state.user.host}:${current === environment.HOME || current.startsWith(environment.HOME + '/') ? '~' + current.slice(environment.HOME.length) : current}${sigil}`; },
+    execute(raw) {
       if (!raw.trim()) return result(); history.push(raw); if (history.length > 500) history.shift();
       let groups; try { groups = parseShell(tokenizeShell(raw, { ...environment, PWD: current, OLDPWD: previous, '?': lastCode })); } catch (error) { lastCode = 2; return result('', 2, line(error.message)); }
       let stdout = '', stderr = '';
