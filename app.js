@@ -3,7 +3,8 @@ import {createTerminalRenderer} from './src/terminal.js';
 import {createWindowManager} from './src/window-manager.js';
 import {createDesktopApps} from './src/desktop-apps.js';
 import {createExtraApps} from './src/extra-apps.js';
-import {createCreativeApps} from './src/creative-apps.js';\nimport {createTrainingApp} from './src/training-app.js';
+import {createCreativeApps} from './src/creative-apps.js';
+import {createTrainingApp} from './src/training-app.js';
 import {icon, esc, DESKTOPS, WALLPAPERS} from './src/ui.js';
 
 const launcher=document.querySelector('#launcher'),launcherButton=document.querySelector('#launcher-button'),search=document.querySelector('#app-search'),quickSettings=document.querySelector('#quick-settings'),contextMenu=document.querySelector('#context-menu');
@@ -11,7 +12,8 @@ let activeCategory='favorites',wm,settingsSignature='';
 const renderTerminal=createTerminalRenderer({system,PACKAGE_REGISTRY,esc,toast,openApp,renderLauncherApps});
 const desktopApps=createDesktopApps({system,PACKAGE_REGISTRY,openApp,toast,applySettings,renderLauncherApps});
 const extras=createExtraApps({system,PACKAGE_REGISTRY,toast,applySettings});
-const creative=createCreativeApps({system,toast});\nconst training=createTrainingApp({system,openApp,toast,applySettings,renderLauncherApps});
+const creative=createCreativeApps({system,toast});
+const training=createTrainingApp({system,openApp,toast,applySettings,renderLauncherApps});
 const app=(name,iconId,category,width,height,render,packageName)=>({name,icon:icon(iconId),iconId,category,width,height,render,package:packageName});
 const apps={
   welcome:app('Välkommen till flinux','linux','system',740,528,desktopApps.renderWelcome),
@@ -28,7 +30,8 @@ const apps={
   'image-viewer':app('Bilder','image','graphics',860,580,extras.renderImages,'image-viewer'),
   clock:app('Klocka','clock','accessories',410,552,extras.renderClock,'clock'),
   sysinfo:app('Om flinux','linux','system',610,610,extras.renderSysinfo,'sysinfo'),
-  snake:app('Snake','games','games',470,604,extras.renderSnake,'snake'),\n  lab:app('Linux Lab','linux','system',930,650,training.renderTraining),
+  snake:app('Snake','games','games',470,604,extras.renderSnake,'snake'),
+  lab:app('Linux Lab','linux','system',930,650,training.renderTraining),
 };
 wm=createWindowManager({layer:document.querySelector('#window-layer'),taskbar:document.querySelector('#taskbar'),apps,system,toast,closeLauncher});
 function openApp(id,options={}){hidePopovers();return wm.openApp(id,options);}
