@@ -75,7 +75,7 @@ const DEFAULT_STATE = {
 function sanitizeNode(node, depth = 0) {
   if (!node || depth > 80) throw new Error('Ogiltigt filsystem');
   const mode = /^[0-7]{3}$/.test(node.mode) ? node.mode : node.type === 'dir' ? '755' : '644';
-  const metadata = { mode, modified: Number.isFinite(node.modified) ? node.modified : Date.now() };
+  const metadata = { mode, modified: Number.isFinite(node.modified) ? node.modified : Date.now(), owner: typeof node.owner === 'string' ? node.owner : undefined, group: typeof node.group === 'string' ? node.group : undefined };
   if (node.type === 'file') return { type: 'file', content: String(node.content ?? ''), ...metadata };
   if (node.type !== 'dir' || !node.children || typeof node.children !== 'object') throw new Error('Ogiltig katalog');
   const children = Object.create(null);
@@ -203,12 +203,12 @@ class SystemCore {
   }
   mkdir(path) {
     const { node, name } = this.assertParent(path); if (own(node.children, name)) throw new Error(`mkdir: '${name}' finns redan`);
-    node.children[name] = { type: 'dir', children: Object.create(null), mode: '755', modified: this.now() }; this.save();
+    node.children[name] = { type: 'dir', children: Object.create(null), mode: '755', modified: this.now(), owner: this.state.user.name, group: this.state.user.name }; this.save();
   }
   writeFile(path, content, append = false) {
     const normalized = this.normalize(path), { node, name } = this.assertParent(normalized), previous = own(node.children, name) ? node.children[name] : null;
     if (previous?.type === 'dir') throw new Error('Sökvägen är en katalog');
-    node.children[name] = { type: 'file', content: (append ? previous?.content || '' : '') + String(content), mode: previous?.mode || '644', modified: this.now() };
+    node.children[name] = { type: 'file', content: (append ? previous?.content || '' : '') + String(content), mode: previous?.mode || '644', modified: this.now(), owner: previous?.owner || this.state.user.name, group: previous?.group || this.state.user.name };
     this.save(); return normalized;
   }
   protectedPath(path) { return ['/', '/home', this.state.user.home, '/usr', '/usr/bin', '/etc', '/var', '/var/log'].includes(path); }
