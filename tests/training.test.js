@@ -54,9 +54,14 @@ test('virtual network distinguishes IP reachability from DNS', () => {
   const { shell } = setup();
   assert.match(ok(shell, 'ip addr'), /192\.168\.1\.10/);
   assert.match(ok(shell, 'ping 192.168.1.20'), /2 received/);
-  ok(shell, "sudo sh -c 'true'");
-  ok(shell, "sudo chmod 644 /etc/resolv.conf");
-  ok(shell, "sudo sh");
+  ok(shell, 'sudo chmod 666 /etc/resolv.conf');
+  ok(shell, 'echo -n > /etc/resolv.conf');
+  const failed = shell.execute('ping server');
+  assert.equal(failed.code, 2);
+  assert.match(failed.stderr, /name resolution/);
+  ok(shell, 'echo nameserver 192.168.1.1 > /etc/resolv.conf');
+  assert.match(ok(shell, 'ping server'), /192\\.168\\.1\\.20/);
+  ok(shell, 'sudo chmod 644 /etc/resolv.conf');
 });
 
 test('lab scenarios are checked from system state rather than command history', () => {
