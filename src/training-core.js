@@ -380,8 +380,13 @@ export function createTrainingCore(system) {
     const restored = JSON.parse(state.labSnapshot);
     restored.training.labSnapshot = null;
     restored.training.activeLab = null;
-    Object.keys(system.state).forEach(key => delete system.state[key]);
+    const restoredTraining = restored.training;
+    delete restored.training;
+    for (const key of Object.keys(system.state)) if (key !== 'training') delete system.state[key];
     Object.assign(system.state, restored);
+    for (const key of Object.keys(state)) delete state[key];
+    Object.assign(state, restoredTraining);
+    system.state.training = state;
     system.save();
     return true;
   }
