@@ -233,3 +233,24 @@ test('launcher, application windows and settings remain usable at 390 pixels', a
   await expect(page.locator('#app-search')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
+
+
+test('Linux Lab stays part of the desktop workflow and accepts GUI solutions', async ({ page }) => {
+  await boot(page);
+  await dismissWelcome(page);
+  const lab = await launch(page, 'lab', 'linux lab');
+  await expect(lab).toContainText('Öva i ditt eget system.');
+  await lab.locator('.training-item').filter({ hasText: 'Installera program' }).click();
+  await expect(lab.locator('[data-task]')).toContainText('Installera cowsay');
+
+  await lab.locator('[data-tool="discover"]').click();
+  const discover = appWindow(page, 'discover');
+  await discover.getByRole('searchbox', { name: 'Sök paket', exact: true }).fill('cowsay');
+  const card = discover.locator('.package-card[data-package="cowsay"]');
+  await card.locator('[data-install]').click();
+  await expect(card.locator('[data-install]')).toHaveText('Ta bort');
+  await discover.locator('[data-action="close"]').click();
+
+  await lab.locator('[data-check]').click();
+  await expect(lab.locator('[data-result]')).toContainText('✓ Klart');
+});
