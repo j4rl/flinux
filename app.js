@@ -3,7 +3,7 @@ import {createTerminalRenderer} from './src/terminal.js';
 import {createWindowManager} from './src/window-manager.js';
 import {createDesktopApps} from './src/desktop-apps.js';
 import {createExtraApps} from './src/extra-apps.js';
-import {createCreativeApps} from './src/creative-apps.js';
+import {createCreativeApps} from './src/creative-apps.js';\nimport {createTrainingApp} from './src/training-app.js';
 import {icon, esc, DESKTOPS, WALLPAPERS} from './src/ui.js';
 
 const launcher=document.querySelector('#launcher'),launcherButton=document.querySelector('#launcher-button'),search=document.querySelector('#app-search'),quickSettings=document.querySelector('#quick-settings'),contextMenu=document.querySelector('#context-menu');
@@ -11,7 +11,7 @@ let activeCategory='favorites',wm,settingsSignature='';
 const renderTerminal=createTerminalRenderer({system,PACKAGE_REGISTRY,esc,toast,openApp,renderLauncherApps});
 const desktopApps=createDesktopApps({system,PACKAGE_REGISTRY,openApp,toast,applySettings,renderLauncherApps});
 const extras=createExtraApps({system,PACKAGE_REGISTRY,toast,applySettings});
-const creative=createCreativeApps({system,toast});
+const creative=createCreativeApps({system,toast});\nconst training=createTrainingApp({system,openApp,toast,applySettings,renderLauncherApps});
 const app=(name,iconId,category,width,height,render,packageName)=>({name,icon:icon(iconId),iconId,category,width,height,render,package:packageName});
 const apps={
   welcome:app('Välkommen till flinux','linux','system',740,528,desktopApps.renderWelcome),
@@ -28,7 +28,7 @@ const apps={
   'image-viewer':app('Bilder','image','graphics',860,580,extras.renderImages,'image-viewer'),
   clock:app('Klocka','clock','accessories',410,552,extras.renderClock,'clock'),
   sysinfo:app('Om flinux','linux','system',610,610,extras.renderSysinfo,'sysinfo'),
-  snake:app('Snake','games','games',470,604,extras.renderSnake,'snake'),
+  snake:app('Snake','games','games',470,604,extras.renderSnake,'snake'),\n  lab:app('Linux Lab','linux','system',930,650,training.renderTraining),
 };
 wm=createWindowManager({layer:document.querySelector('#window-layer'),taskbar:document.querySelector('#taskbar'),apps,system,toast,closeLauncher});
 function openApp(id,options={}){hidePopovers();return wm.openApp(id,options);}
@@ -41,7 +41,7 @@ function availableApps(){return Object.entries(apps).filter(([id,a])=>id!=='welc
 function renderLauncherApps(query=search.value){
   const categories=[['favorites','Favoriter','linux'],['all','Alla program','packages'],['accessories','Tillbehör','editor'],['graphics','Grafik','paint'],['games','Spel','games'],['system','System','terminal'],['settings','Inställningar','settings']];
   const nav=document.querySelector('#app-categories');nav.innerHTML=categories.map(([id,name,i])=>`<button data-category="${id}" class="${id===activeCategory?'active':''}">${icon(i)}${name}</button>`).join('');nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{activeCategory=b.dataset.category;renderLauncherApps();});
-  let entries=availableApps();if(!query){if(activeCategory==='favorites')entries=entries.filter(([id])=>['terminal','files','discover','settings','kate','image-viewer','clock'].includes(id));else if(activeCategory!=='all')entries=entries.filter(([,a])=>a.category===activeCategory);}
+  let entries=availableApps();if(!query){if(activeCategory==='favorites')entries=entries.filter(([id])=>['terminal','files','lab','discover','settings','kate','image-viewer','clock'].includes(id));else if(activeCategory!=='all')entries=entries.filter(([,a])=>a.category===activeCategory);}
   const grid=document.querySelector('#app-grid');grid.innerHTML='';entries.filter(([id,a])=>`${a.name} ${id} ${a.package||''}`.toLowerCase().includes(query.toLowerCase())).forEach(([id,a])=>{const b=document.createElement('button');b.className='app-tile';b.dataset.app=id;b.innerHTML=`<span class="app-icon ${a.category}">${a.icon}</span><span>${a.name.replace(' · Textredigerare','').replace(' · Paket','')}</span>`;b.onclick=()=>openApp(id);grid.append(b);});if(!grid.children.length)grid.innerHTML='<p class="empty-apps">Inga program här än.<br>Hitta något nytt i Discover.</p>';
 }
 
@@ -60,7 +60,7 @@ function applySettings(){
 
 launcherButton.onclick=toggleLauncher;search.oninput=()=>renderLauncherApps();document.querySelector('#about-button').onclick=()=>openApp('sysinfo');
 document.querySelector('#pinned-apps').innerHTML=['files','terminal','discover'].map(id=>`<button class="pinned-button" data-open="${id}" aria-label="${apps[id].name}" title="${apps[id].name}">${apps[id].icon}</button>`).join('');document.querySelectorAll('.pinned-button').forEach(b=>b.onclick=()=>openApp(b.dataset.open));
-document.querySelector('#desktop-icons').innerHTML=[['files','Hemma'],['terminal','Terminal'],['discover','Paket'],['image-viewer','Bakgrunder']].map(([id,name])=>`<button class="desktop-icon" data-open="${id}"><span class="desktop-app-icon kind-${id}">${apps[id].icon}</span><span class="label">${name}</span></button>`).join('');
+document.querySelector('#desktop-icons').innerHTML=[['files','Hemma'],['terminal','Terminal'],['lab','Linux Lab'],['discover','Paket'],['image-viewer','Bakgrunder']].map(([id,name])=>`<button class="desktop-icon" data-open="${id}"><span class="desktop-app-icon kind-${id}">${apps[id].icon}</span><span class="label">${name}</span></button>`).join('');
 document.querySelectorAll('.desktop-icon').forEach(b=>{b.ondblclick=()=>openApp(b.dataset.open);b.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();openApp(b.dataset.open);}};b.addEventListener('pointerup',e=>{if(e.pointerType==='touch')openApp(b.dataset.open);});});
 
 document.querySelector('#tray-button').onclick=()=>{
