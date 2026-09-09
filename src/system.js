@@ -123,6 +123,7 @@ class SystemCore {
         this.state.installed = [...new Set([...(Array.isArray(persisted.installed) ? persisted.installed : this.state.installed), ...Object.keys(PACKAGE_REGISTRY).filter(name => PACKAGE_REGISTRY[name].core)])].filter(name => own(PACKAGE_REGISTRY, name));
         this.state.cwd = typeof persisted.cwd === 'string' ? persisted.cwd : DEFAULT_STATE.cwd;
         this.state.packageLog = Array.isArray(persisted.packageLog) ? persisted.packageLog.filter(x => typeof x === 'string').slice(-100) : [];
+        if (persisted.training && typeof persisted.training === 'object' && !Array.isArray(persisted.training)) this.state.training = clone(persisted.training);
         const desktopPackage = Object.keys(PACKAGE_REGISTRY).find(name => PACKAGE_REGISTRY[name].desktop === this.state.settings.desktop);
         if (desktopPackage && this.migratedFromLegacy && !this.state.installed.includes(desktopPackage)) this.state.installed.push(desktopPackage);
         if (!desktopPackage || !this.state.installed.includes(desktopPackage)) this.state.settings.desktop = 'plasma';
