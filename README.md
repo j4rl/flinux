@@ -26,7 +26,7 @@ Använd HTTP-servern; ES-moduler fungerar inte när `index.html` öppnas direkt 
 - **Terminal:** citattecken, pipelines, `>`, `>>`, `&&`, `||`, `;`, miljövariabler, historik och Tab-komplettering. Varje terminal har en egen aktuell katalog.
 - **Filer och Kate:** skapa mappar och filer, byt namn, ta bort, redigera och exportera. Markdown-redigeraren har en separat förhandsvisning.
 - **Program:** bildvisare, Paint, kalkylator, klocka, timer, stoppur, systeminformation, btop, Snake och Röj.
-- **Virtuella tjänster:** starta Apache med `systemctl` och läs den virtuella webbplatsen med `curl` eller `wget`.
+- **Linux Lab:** övningar som förändrar det vanliga virtuella systemet. Lös uppgifter med skrivbordet, Filer, Kate, Discover och Terminal; Flinux kontrollerar resultatet i stället för en bestämd kommandosekvens.\n- **Virtuella tjänster:** starta Apache med `systemctl` och läs den virtuella webbplatsen med `curl` eller `wget`.
 - **Utseende:** fyra egna SVG-bakgrunder, accentfärger, minskad rörelse och en glad liten pingvin. [Visa grafikgalleriet](assets/preview.html).
 - **Sparat system:** filer, paket, inställningar och tjänster lagras lokalt. Exportera och importera en JSON-säkerhetskopia i Inställningar.
 
