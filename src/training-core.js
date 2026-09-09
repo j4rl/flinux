@@ -120,7 +120,7 @@ function initialize(system) {
   state.users ||= clone(DEFAULT_USERS);
   state.groups ||= clone(DEFAULT_GROUPS);
   state.processes ||= [];
-  state.network ||= clone(initialize.network);
+  state.network ||= { interface: 'eth0', address: '192.168.1.10/24', gateway: '192.168.1.1', dns: '192.168.1.1', hosts: { router: '192.168.1.1', server: '192.168.1.20', nas: '192.168.1.30', flinux: '192.168.1.10' } };
   for (const [name, user] of Object.entries(DEFAULT_USERS)) state.users[name] ||= clone(user);
   for (const [name, group] of Object.entries(DEFAULT_GROUPS)) state.groups[name] ||= clone(group);
 
@@ -378,9 +378,10 @@ export function createTrainingCore(system) {
   function resetLab() {
     if (!state.labSnapshot) return false;
     const restored = JSON.parse(state.labSnapshot);
-    system.state = restored;
-    system.state.training.labSnapshot = null;
-    system.state.training.activeLab = null;
+    restored.training.labSnapshot = null;
+    restored.training.activeLab = null;
+    Object.keys(system.state).forEach(key => delete system.state[key]);
+    Object.assign(system.state, restored);
     system.save();
     return true;
   }
