@@ -245,6 +245,139 @@ export function createShellSession({ system, PACKAGE_REGISTRY = DEFAULT_REGISTRY
   return {
     get cwd() { return current; }, get history() { return [...history]; }, get exitCode() { return lastCode; },
     get prompt() { const sigil = currentUser === 'root' ? '#' : '
+      if (!raw.trim()) return result(); history.push(raw); if (history.length > 500) history.shift();
+      let groups; try { groups = parseShell(tokenizeShell(raw, { ...environment, PWD: current, OLDPWD: previous, '?': lastCode })); } catch (error) { lastCode = 2; return result('', 2, line(error.message)); }
+      let stdout = '', stderr = '';
+      for (const group of groups) {
+        if ((group.connector === '&&' && lastCode !== 0) || (group.connector === '||' && lastCode === 0)) continue;
+        let stdin = '', code = 0;
+        for (let i = 0; i < group.commands.length; i++) {
+          const command = group.commands[i];
+          try {
+            const redirects = command.redirects.map(redirect => ({ ...redirect, path: expand(redirect.path) }));
+            for (const redirect of redirects) { if (!redirect.path) throw new Error('Omdirigeringen behöver ett filnamn'); if (redirect.operator === '<') stdin = read(redirect.path); else training.writeFile(path(redirect.path), '', redirect.operator === '>>', currentUser); }
+            const output = run(command.words.map(expand), stdin, { piped: group.commands.length > 1, redirected: redirects.some(redirect => redirect.operator !== '<') }); stdin = output.stdout; code = output.code; stderr += output.stderr;
+            const writes = redirects.filter(redirect => redirect.operator !== '<'); if (writes.length) { const redirect = writes.at(-1); training.writeFile(path(redirect.path), stdin, true, currentUser); stdin = ''; }
+          } catch (error) { stderr += line(error.message); stdin = ''; code = 1; }
+        }
+        stdout += stdin; lastCode = code;
+      }
+      return result(stdout, lastCode, stderr);
+    },
+    complete(raw) {
+      const match = raw.match(/(?:^|[\s|;&])([^\s|;&]*)$/); if (!match) return { value: raw, matches: [] };
+      const token = match[1], prefix = raw.slice(0, raw.length - token.length), commandPosition = !prefix.trim() || /[|;&]\s*$/.test(prefix); let matches = [];
+      if (commandPosition && !token.includes('/')) matches = Object.keys(commands).filter(name => isAvailable(name) && name.startsWith(token)).sort();
+      else { const slash = token.lastIndexOf('/'), directory = slash < 0 ? '' : token.slice(0, slash + 1), partial = token.slice(slash + 1), node = system.getNode(path(directory || '.')); if (node?.type === 'dir') matches = Object.keys(node.children).filter(name => name.startsWith(partial) && (partial.startsWith('.') || !name.startsWith('.'))).sort().map(name => directory + name + (node.children[name].type === 'dir' ? '/' : '')); }
+      if (!matches.length) return { value: raw, matches };
+      let common = matches[0]; for (const candidate of matches.slice(1)) while (!candidate.startsWith(common)) common = common.slice(0, -1);
+      const escaped = common.replace(/([\s'"\\;&|<>$])/g, '\\$1'); return { value: prefix + escaped + (matches.length === 1 && !common.endsWith('/') ? ' ' : ''), matches };
+    }
+  };
+}
+function unescapeText(text) { return text.replace(/\\([ntr\\])/g, (_, code) => ({ n: '\n', t: '\t', r: '\r', '\\': '\\' })[code]); }
+function expandRange(text) { return text.replace(/(.)-(.)/g, (_, from, to) => { const start = from.codePointAt(0), end = to.codePointAt(0); if (end < start || end - start > 256) throw new Error('tr: ogiltigt teckenintervall'); return Array.from({ length: end - start + 1 }, (_, i) => String.fromCodePoint(start + i)).join(''); }); }
+function selectIndices(spec, length) { const indices = new Set(); for (const part of spec.split(',')) { const match = part.match(/^(\d+)(?:-(\d*))?$/); if (!match) throw new Error('cut: ogiltigt intervall'); const start = Number(match[1]), end = part.includes('-') ? Number(match[2] || length) : start; if (start < 1 || end < start) throw new Error('cut: ogiltigt intervall'); for (let i = start; i <= Math.min(end, length); i++) indices.add(i - 1); } return [...indices].sort((a, b) => a - b); }
+function figlet(text) {
+  const font = { A:'01110/10001/11111/10001/10001', B:'11110/10001/11110/10001/11110', C:'01111/10000/10000/10000/01111', D:'11110/10001/10001/10001/11110', E:'11111/10000/11110/10000/11111', F:'11111/10000/11110/10000/10000', G:'01111/10000/10111/10001/01111', H:'10001/10001/11111/10001/10001', I:'111/010/010/010/111', J:'00111/00010/00010/10010/01100', K:'10001/10010/11100/10010/10001', L:'10000/10000/10000/10000/11111', M:'10001/11011/10101/10001/10001', N:'10001/11001/10101/10011/10001', O:'01110/10001/10001/10001/01110', P:'11110/10001/11110/10000/10000', Q:'01110/10001/10101/10010/01101', R:'11110/10001/11110/10010/10001', S:'01111/10000/01110/00001/11110', T:'11111/00100/00100/00100/00100', U:'10001/10001/10001/10001/01110', V:'10001/10001/10001/01010/00100', W:'10001/10001/10101/11011/10001', X:'10001/01010/00100/01010/10001', Y:'10001/01010/00100/00100/00100', Z:'11111/00010/00100/01000/11111', '0':'01110/10011/10101/11001/01110', '1':'010/110/010/010/111', '2':'11110/00001/01110/10000/11111', '3':'11110/00001/01110/00001/11110', '4':'10010/10010/11111/00010/00010', '5':'11111/10000/11110/00001/11110', '6':'01111/10000/11110/10001/01110', '7':'11111/00001/00010/00100/00100', '8':'01110/10001/01110/10001/01110', '9':'01110/10001/01111/00001/11110', ' ':'000/000/000/000/000', '!':'1/1/1/0/1', '?':'1110/0001/0110/0000/0100' };
+  const chars = [...text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().slice(0, 60)].map(char => (font[char] || font['?']).split('/'));
+  return Array.from({ length: 5 }, (_, i) => chars.map(char => char[i].replaceAll('1', '█').replaceAll('0', ' ')).join(' ')).join('\n') + '\n';
+}
+export function createTerminalRenderer({ system, PACKAGE_REGISTRY = DEFAULT_REGISTRY, toast = () => {}, openApp, renderLauncherApps = () => {} }) {
+  return function renderTerminal(root, options = {}, terminalWindow) {
+    root.innerHTML = '<div class="terminal"><div class="terminal-output" role="log" aria-live="polite"><span class="success">flinux 1.0 Glimten</span> — Det glada linuxet\nSkriv <span class="directory">help</span> för hjälp. Tab kompletterar, ↑/↓ visar historik.\n\n</div><form class="terminal-line"><span class="prompt"></span><input class="terminal-input" aria-label="Terminalkommando" autocomplete="off" autocapitalize="off" spellcheck="false"></form></div>';
+    const terminal = root.firstElementChild, output = terminal.querySelector('.terminal-output'), form = terminal.querySelector('form'), input = form.querySelector('input'), prompt = form.querySelector('.prompt');
+    let position = 0, draft = '', reader = null;
+    const print = (text, className = '') => { if (!text) return; const span = document.createElement('span'); span.className = className; span.textContent = text; output.append(span); while (output.childNodes.length > 1200) output.firstChild.remove(); terminal.scrollTop = terminal.scrollHeight; };
+    const closeReader = () => { reader?.remove(); reader = null; form.hidden = false; output.hidden = false; input.focus(); };
+    const shell = createShellSession({ system, PACKAGE_REGISTRY, openApp, cwd: options.cwd || options.path || system.state.user.home, onClear: () => { output.textContent = ''; }, onExit: () => terminalWindow?.querySelector('[data-action="close"]')?.click(), onRead: (text, title) => {
+      reader = document.createElement('div'); reader.className = 'terminal-reader'; reader.style.cssText = 'display:flex;flex-direction:column;height:100%;min-height:0';
+      const bar = document.createElement('div'); bar.style.cssText = 'display:flex;justify-content:space-between;padding:8px;background:#21322f'; const label = document.createElement('span'); label.textContent = `${title} · q stänger`; const close = document.createElement('button'); close.textContent = 'Stäng'; close.onclick = closeReader; bar.append(label, close);
+      const content = document.createElement('pre'); content.textContent = text; content.tabIndex = 0; content.style.cssText = 'overflow:auto;white-space:pre-wrap;flex:1;margin:0;padding:12px'; content.onkeydown = event => { if (['q', 'Escape'].includes(event.key)) { event.preventDefault(); closeReader(); } }; reader.append(bar, content); output.hidden = true; form.hidden = true; terminal.append(reader); content.focus();
+    } });
+    const updatePrompt = () => { prompt.textContent = shell.prompt; };
+    form.onsubmit = event => { event.preventDefault(); const raw = input.value; if (!raw.trim()) return; print(`${shell.prompt} ${raw}\n`, 'terminal-command'); input.value = ''; draft = ''; const response = shell.execute(raw); print(response.stdout); print(response.stderr, 'error'); position = shell.history.length; updatePrompt(); renderLauncherApps(); if (system.storageError) toast(system.storageError); };
+    input.onkeydown = event => {
+      if (event.ctrlKey && event.altKey) return;
+      const history = shell.history;
+      if (event.key === 'ArrowUp') { event.preventDefault(); if (position === history.length) draft = input.value; position = Math.max(0, position - 1); input.value = history[position] || ''; }
+      else if (event.key === 'ArrowDown') { event.preventDefault(); position = Math.min(history.length, position + 1); input.value = history[position] ?? draft; }
+      else if (event.key === 'Tab') { event.preventDefault(); const completed = shell.complete(input.value); if (completed.matches.length > 1 && completed.value === input.value) print(completed.matches.join('  ') + '\n'); input.value = completed.value; }
+      else if (event.ctrlKey && event.key.toLowerCase() === 'l') { event.preventDefault(); output.textContent = ''; }
+      else if (event.ctrlKey && event.key.toLowerCase() === 'c' && !globalThis.getSelection()?.toString()) { event.preventDefault(); print(`${shell.prompt} ${input.value}^C\n`); input.value = ''; position = history.length; }
+    };
+    terminal.addEventListener('click', event => { if (!reader && !globalThis.getSelection()?.toString() && !event.target.closest('button')) input.focus(); });
+    updatePrompt(); setTimeout(() => input.focus(), 0);
+  };
+}
+; return `${currentUser}@${system.state.user.host}:${current === environment.HOME || current.startsWith(environment.HOME + '/') ? '~' + current.slice(environment.HOME.length) : current}${sigil}`; },
+    execute(raw) {
+      if (!raw.trim()) return result(); history.push(raw); if (history.length > 500) history.shift();
+      let groups; try { groups = parseShell(tokenizeShell(raw, { ...environment, PWD: current, OLDPWD: previous, '?': lastCode })); } catch (error) { lastCode = 2; return result('', 2, line(error.message)); }
+      let stdout = '', stderr = '';
+      for (const group of groups) {
+        if ((group.connector === '&&' && lastCode !== 0) || (group.connector === '||' && lastCode === 0)) continue;
+        let stdin = '', code = 0;
+        for (let i = 0; i < group.commands.length; i++) {
+          const command = group.commands[i];
+          try {
+            const redirects = command.redirects.map(redirect => ({ ...redirect, path: expand(redirect.path) }));
+            for (const redirect of redirects) { if (!redirect.path) throw new Error('Omdirigeringen behöver ett filnamn'); if (redirect.operator === '<') stdin = read(redirect.path); else training.writeFile(path(redirect.path), '', redirect.operator === '>>', currentUser); }
+            const output = run(command.words.map(expand), stdin, { piped: group.commands.length > 1, redirected: redirects.some(redirect => redirect.operator !== '<') }); stdin = output.stdout; code = output.code; stderr += output.stderr;
+            const writes = redirects.filter(redirect => redirect.operator !== '<'); if (writes.length) { const redirect = writes.at(-1); training.writeFile(path(redirect.path), stdin, true, currentUser); stdin = ''; }
+          } catch (error) { stderr += line(error.message); stdin = ''; code = 1; }
+        }
+        stdout += stdin; lastCode = code;
+      }
+      return result(stdout, lastCode, stderr);
+    },
+    complete(raw) {
+      const match = raw.match(/(?:^|[\s|;&])([^\s|;&]*)$/); if (!match) return { value: raw, matches: [] };
+      const token = match[1], prefix = raw.slice(0, raw.length - token.length), commandPosition = !prefix.trim() || /[|;&]\s*$/.test(prefix); let matches = [];
+      if (commandPosition && !token.includes('/')) matches = Object.keys(commands).filter(name => isAvailable(name) && name.startsWith(token)).sort();
+      else { const slash = token.lastIndexOf('/'), directory = slash < 0 ? '' : token.slice(0, slash + 1), partial = token.slice(slash + 1), node = system.getNode(path(directory || '.')); if (node?.type === 'dir') matches = Object.keys(node.children).filter(name => name.startsWith(partial) && (partial.startsWith('.') || !name.startsWith('.'))).sort().map(name => directory + name + (node.children[name].type === 'dir' ? '/' : '')); }
+      if (!matches.length) return { value: raw, matches };
+      let common = matches[0]; for (const candidate of matches.slice(1)) while (!candidate.startsWith(common)) common = common.slice(0, -1);
+      const escaped = common.replace(/([\s'"\\;&|<>$])/g, '\\$1'); return { value: prefix + escaped + (matches.length === 1 && !common.endsWith('/') ? ' ' : ''), matches };
+    }
+  };
+}
+function unescapeText(text) { return text.replace(/\\([ntr\\])/g, (_, code) => ({ n: '\n', t: '\t', r: '\r', '\\': '\\' })[code]); }
+function expandRange(text) { return text.replace(/(.)-(.)/g, (_, from, to) => { const start = from.codePointAt(0), end = to.codePointAt(0); if (end < start || end - start > 256) throw new Error('tr: ogiltigt teckenintervall'); return Array.from({ length: end - start + 1 }, (_, i) => String.fromCodePoint(start + i)).join(''); }); }
+function selectIndices(spec, length) { const indices = new Set(); for (const part of spec.split(',')) { const match = part.match(/^(\d+)(?:-(\d*))?$/); if (!match) throw new Error('cut: ogiltigt intervall'); const start = Number(match[1]), end = part.includes('-') ? Number(match[2] || length) : start; if (start < 1 || end < start) throw new Error('cut: ogiltigt intervall'); for (let i = start; i <= Math.min(end, length); i++) indices.add(i - 1); } return [...indices].sort((a, b) => a - b); }
+function figlet(text) {
+  const font = { A:'01110/10001/11111/10001/10001', B:'11110/10001/11110/10001/11110', C:'01111/10000/10000/10000/01111', D:'11110/10001/10001/10001/11110', E:'11111/10000/11110/10000/11111', F:'11111/10000/11110/10000/10000', G:'01111/10000/10111/10001/01111', H:'10001/10001/11111/10001/10001', I:'111/010/010/010/111', J:'00111/00010/00010/10010/01100', K:'10001/10010/11100/10010/10001', L:'10000/10000/10000/10000/11111', M:'10001/11011/10101/10001/10001', N:'10001/11001/10101/10011/10001', O:'01110/10001/10001/10001/01110', P:'11110/10001/11110/10000/10000', Q:'01110/10001/10101/10010/01101', R:'11110/10001/11110/10010/10001', S:'01111/10000/01110/00001/11110', T:'11111/00100/00100/00100/00100', U:'10001/10001/10001/10001/01110', V:'10001/10001/10001/01010/00100', W:'10001/10001/10101/11011/10001', X:'10001/01010/00100/01010/10001', Y:'10001/01010/00100/00100/00100', Z:'11111/00010/00100/01000/11111', '0':'01110/10011/10101/11001/01110', '1':'010/110/010/010/111', '2':'11110/00001/01110/10000/11111', '3':'11110/00001/01110/00001/11110', '4':'10010/10010/11111/00010/00010', '5':'11111/10000/11110/00001/11110', '6':'01111/10000/11110/10001/01110', '7':'11111/00001/00010/00100/00100', '8':'01110/10001/01110/10001/01110', '9':'01110/10001/01111/00001/11110', ' ':'000/000/000/000/000', '!':'1/1/1/0/1', '?':'1110/0001/0110/0000/0100' };
+  const chars = [...text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().slice(0, 60)].map(char => (font[char] || font['?']).split('/'));
+  return Array.from({ length: 5 }, (_, i) => chars.map(char => char[i].replaceAll('1', '█').replaceAll('0', ' ')).join(' ')).join('\n') + '\n';
+}
+export function createTerminalRenderer({ system, PACKAGE_REGISTRY = DEFAULT_REGISTRY, toast = () => {}, openApp, renderLauncherApps = () => {} }) {
+  return function renderTerminal(root, options = {}, terminalWindow) {
+    root.innerHTML = '<div class="terminal"><div class="terminal-output" role="log" aria-live="polite"><span class="success">flinux 1.0 Glimten</span> — Det glada linuxet\nSkriv <span class="directory">help</span> för hjälp. Tab kompletterar, ↑/↓ visar historik.\n\n</div><form class="terminal-line"><span class="prompt"></span><input class="terminal-input" aria-label="Terminalkommando" autocomplete="off" autocapitalize="off" spellcheck="false"></form></div>';
+    const terminal = root.firstElementChild, output = terminal.querySelector('.terminal-output'), form = terminal.querySelector('form'), input = form.querySelector('input'), prompt = form.querySelector('.prompt');
+    let position = 0, draft = '', reader = null;
+    const print = (text, className = '') => { if (!text) return; const span = document.createElement('span'); span.className = className; span.textContent = text; output.append(span); while (output.childNodes.length > 1200) output.firstChild.remove(); terminal.scrollTop = terminal.scrollHeight; };
+    const closeReader = () => { reader?.remove(); reader = null; form.hidden = false; output.hidden = false; input.focus(); };
+    const shell = createShellSession({ system, PACKAGE_REGISTRY, openApp, cwd: options.cwd || options.path || system.state.user.home, onClear: () => { output.textContent = ''; }, onExit: () => terminalWindow?.querySelector('[data-action="close"]')?.click(), onRead: (text, title) => {
+      reader = document.createElement('div'); reader.className = 'terminal-reader'; reader.style.cssText = 'display:flex;flex-direction:column;height:100%;min-height:0';
+      const bar = document.createElement('div'); bar.style.cssText = 'display:flex;justify-content:space-between;padding:8px;background:#21322f'; const label = document.createElement('span'); label.textContent = `${title} · q stänger`; const close = document.createElement('button'); close.textContent = 'Stäng'; close.onclick = closeReader; bar.append(label, close);
+      const content = document.createElement('pre'); content.textContent = text; content.tabIndex = 0; content.style.cssText = 'overflow:auto;white-space:pre-wrap;flex:1;margin:0;padding:12px'; content.onkeydown = event => { if (['q', 'Escape'].includes(event.key)) { event.preventDefault(); closeReader(); } }; reader.append(bar, content); output.hidden = true; form.hidden = true; terminal.append(reader); content.focus();
+    } });
+    const updatePrompt = () => { prompt.textContent = shell.prompt; };
+    form.onsubmit = event => { event.preventDefault(); const raw = input.value; if (!raw.trim()) return; print(`${shell.prompt} ${raw}\n`, 'terminal-command'); input.value = ''; draft = ''; const response = shell.execute(raw); print(response.stdout); print(response.stderr, 'error'); position = shell.history.length; updatePrompt(); renderLauncherApps(); if (system.storageError) toast(system.storageError); };
+    input.onkeydown = event => {
+      if (event.ctrlKey && event.altKey) return;
+      const history = shell.history;
+      if (event.key === 'ArrowUp') { event.preventDefault(); if (position === history.length) draft = input.value; position = Math.max(0, position - 1); input.value = history[position] || ''; }
+      else if (event.key === 'ArrowDown') { event.preventDefault(); position = Math.min(history.length, position + 1); input.value = history[position] ?? draft; }
+      else if (event.key === 'Tab') { event.preventDefault(); const completed = shell.complete(input.value); if (completed.matches.length > 1 && completed.value === input.value) print(completed.matches.join('  ') + '\n'); input.value = completed.value; }
+      else if (event.ctrlKey && event.key.toLowerCase() === 'l') { event.preventDefault(); output.textContent = ''; }
+      else if (event.ctrlKey && event.key.toLowerCase() === 'c' && !globalThis.getSelection()?.toString()) { event.preventDefault(); print(`${shell.prompt} ${input.value}^C\n`); input.value = ''; position = history.length; }
+    };
+    terminal.addEventListener('click', event => { if (!reader && !globalThis.getSelection()?.toString() && !event.target.closest('button')) input.focus(); });
+    updatePrompt(); setTimeout(() => input.focus(), 0);
+  };
+}
+; return `${currentUser}@${system.state.user.host}:${current === environment.HOME || current.startsWith(environment.HOME + '/') ? '~' + current.slice(environment.HOME.length) : current}${sigil}`; },
     execute(raw) {
       if (!raw.trim()) return result(); history.push(raw); if (history.length > 500) history.shift();
       let groups; try { groups = parseShell(tokenizeShell(raw, { ...environment, PWD: current, OLDPWD: previous, '?': lastCode })); } catch (error) { lastCode = 2; return result('', 2, line(error.message)); }
