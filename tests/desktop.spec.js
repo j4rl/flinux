@@ -239,18 +239,80 @@ test('Linux Lab stays part of the desktop workflow and accepts GUI solutions', a
   await boot(page);
   await dismissWelcome(page);
   const lab = await launch(page, 'lab', 'linux lab');
-  await expect(lab).toContainText('Öva i ditt eget system.');
-  await lab.locator('.training-item').filter({ hasText: 'Installera program' }).click();
-  await expect(lab.locator('[data-task]')).toContainText('Installera cowsay');
+  await expect(lab).toContainText('Öva Linux i ett system du får förstöra.');
+  await lab.locator('[data-start="filesystem"]').click();
+  await expect(lab.locator('.training-assignment')).toContainText('answer.txt');
 
-  await lab.locator('[data-tool="discover"]').click();
-  const discover = appWindow(page, 'discover');
-  await discover.getByRole('searchbox', { name: 'Sök paket', exact: true }).fill('cowsay');
-  const card = discover.locator('.package-card[data-package="cowsay"]');
-  await card.locator('[data-install]').click();
-  await expect(card.locator('[data-install]')).toHaveText('Ta bort');
-  await discover.locator('[data-action="close"]').click();
+  await lab.locator('[data-files]').click();
+  const files = appWindow(page, 'files');
+  page.once('dialog', dialog => dialog.accept('lab'));
+  await files.locator('[data-new-folder]').click();
+  await files.getByRole('button', { name: 'lab', exact: true }).dblclick();
+  page.once('dialog', dialog => dialog.accept('answer.txt'));
+  await files.locator('[data-new-file]').click();
+  const editor = appWindow(page, 'kate');
+  await editor.getByRole('textbox', { name: 'Filens innehåll' }).fill('Hej flinux!');
+  await editor.getByRole('textbox', { name: 'Filens innehåll' }).press('Control+s');
+  await expect(editor.locator('[data-save-status]')).toHaveText('Sparad');
+  await editor.locator('[data-action="close"]').click();
+  await files.locator('[data-action="close"]').click();
 
   await lab.locator('[data-check]').click();
   await expect(lab.locator('[data-result]')).toContainText('✓ Klart');
+});
+
+test('show desktop hides all i3 windows and restores the focused maximized window', async ({ page }) => {
+  await boot(page);
+  await dismissWelcome(page);
+  const settings = await launch(page, 'settings');
+  await settings.locator('[data-desktop="i3"]').click();
+  await settings.locator('[data-action="close"]').click();
+  const terminal = await launch(page, 'terminal');
+  const firstId = await terminal.getAttribute('data-id');
+  await page.keyboard.press('Control+Alt+t');
+  await page.keyboard.press('Control+Alt+t');
+  const third = page.locator('.window.focused');
+  const minimizedId = await third.getAttribute('data-id');
+  await third.locator('[data-action="min"]').click();
+  const first = page.locator(`.window[data-id="${firstId}"]`);
+  await first.locator('[data-action="max"]').click();
+  await expect(page.locator('.window:visible')).toHaveCount(1);
+
+  await page.locator('#show-desktop').click();
+  await expect(page.locator('.window:visible')).toHaveCount(0);
+  await page.locator('#show-desktop').click();
+  await expect(first).toHaveClass(/focused/);
+  await expect(first).toHaveClass(/maximized/);
+  await expect(page.locator('.window:visible')).toHaveCount(1);
+  await first.locator('[data-action="max"]').click();
+  await expect(page.locator('.window:visible')).toHaveCount(2);
+  await expect(page.locator(`.window[data-id="${minimizedId}"]`)).toHaveClass(/minimized/);
+});
+
+test('DNS lab stays responsive while terminal commands update its result', async ({ page }) => {
+  const consoleErrors = [];
+  page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+  await boot(page);
+  await dismissWelcome(page);
+  const lab = await launch(page, 'lab', 'linux lab');
+  await lab.locator('[data-start="dns"]').click();
+  await expect(lab.locator('[data-result]')).toContainText('Inte klart ännu');
+  await lab.locator('[data-terminal]').click();
+  const terminal = appWindow(page, 'terminal');
+  await command(terminal, 'ping server');
+  await expect(terminal.locator('.terminal-output')).toContainText('name resolution');
+  await command(terminal, 'sudo chmod 666 /etc/resolv.conf');
+  await command(terminal, 'echo nameserver 192.168.1.1 > /etc/resolv.conf');
+  await command(terminal, 'ping server');
+  await expect(terminal.locator('.terminal-output')).toContainText('2 received');
+  await terminal.locator('[data-action="close"]').click();
+  await lab.locator('[data-check]').click();
+  await expect(lab.locator('[data-result]')).toContainText('✓ Klart');
+  await page.evaluate(async () => {
+    const { system } = await import('/src/system.js');
+    system.writeFile('/etc/resolv.conf', 'nameserver <img/src=x>\n');
+  });
+  await expect(lab.locator('[data-result]')).toContainText('<img/src=x>');
+  await expect(lab.locator('[data-result] img')).toHaveCount(0);
+  expect(consoleErrors, 'Lab checks must not trigger recursive state updates').toEqual([]);
 });

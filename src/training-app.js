@@ -37,9 +37,7 @@ export function createTrainingApp({ system, openApp, toast }) {
               <button class="button primary" data-check>Kontrollera</button>
               <button class="button" data-restart>Starta om scenariot</button>
             </div>
-            <div class="training-result ${status?.ok ? 'success' : 'pending'}" data-result>
-              ${status ? (status.ok ? '✓ Klart: ' : 'Inte klart ännu: ') + status.message : ''}
-            </div>
+            <div class="training-result ${status?.ok ? 'success' : 'pending'}" data-result></div>
             <div class="training-result" data-hint-box hidden>Tips: ${active.hint}</div>
           </div>` : `<div class="training-hero">
             <span class="training-level">LINUX PÅ RIKTIGT — FAST VIRTUELLT</span>
@@ -49,6 +47,7 @@ export function createTrainingApp({ system, openApp, toast }) {
         </section>
       </div>`;
 
+      if (status) root.querySelector('[data-result]').textContent = (status.ok ? '✓ Klart: ' : 'Inte klart ännu: ') + status.message;
       root.querySelectorAll('[data-start]').forEach(button => {
         button.onclick = () => {
           try {

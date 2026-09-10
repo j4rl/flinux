@@ -199,6 +199,7 @@ class SystemCore {
     return Object.keys(node.children).sort((a, b) => (node.children[b].type === 'dir') - (node.children[a].type === 'dir') || a.localeCompare(b));
   }
   assertParent(path) {
+    if (this.normalize(path).split('/').filter(Boolean).length > 80) throw new Error('Filsystemet stöder högst 80 katalognivåer');
     const parent = this.parent(path); if (!parent.name) throw new Error('Åtgärden är inte tillåten på rotkatalogen');
     if (parent.node?.type !== 'dir') throw new Error('Överordnad katalog finns inte'); return parent;
   }
@@ -228,7 +229,7 @@ class SystemCore {
     if (sourceNode.type === 'dir' && (sourcePath === '/' || target.startsWith(sourcePath + '/'))) throw new Error('En katalog kan inte kopieras eller flyttas in i sig själv');
     const { node, name } = this.assertParent(target), existing = this.getNode(target);
     if (existing?.type === 'dir' || (existing && sourceNode.type === 'dir')) throw new Error('Målet finns redan och är inte en ersättningsbar fil');
-    node.children[name] = sanitizeNode(sourceNode);
+    node.children[name] = sanitizeNode(sourceNode, target.split('/').filter(Boolean).length);
     if (move) { const parent = this.parent(sourcePath); delete parent.node.children[parent.name]; }
     this.save(); return target;
   }

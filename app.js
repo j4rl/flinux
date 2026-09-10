@@ -72,7 +72,22 @@ document.querySelector('#tray-button').onclick=()=>{
   quickSettings.querySelector('[data-open-settings]').onclick=()=>openApp('settings');quickSettings.querySelector('[data-open-clock]').onclick=()=>openApp('clock');
 };
 const desktopHidden=new Map();
-document.querySelector('#show-desktop').onclick=()=>{const workspace=wm.getActiveWorkspace(),hidden=desktopHidden.get(workspace)||[];if(hidden.length){hidden.filter(w=>w.isConnected&&Number(w.dataset.workspace)===workspace).forEach(w=>wm.focusWindow(w));desktopHidden.delete(workspace);}else{const visible=wm.getWindows().filter(w=>!w.hidden);desktopHidden.set(workspace,visible);visible.forEach(w=>wm.minimizeWindow(w));}};
+document.querySelector('#show-desktop').onclick=()=>{
+  const workspace=wm.getActiveWorkspace(),hidden=desktopHidden.get(workspace);
+  if(hidden?.length){
+    const restore=hidden.filter(({win})=>win.isConnected&&Number(win.dataset.workspace)===workspace);
+    restore.forEach(({win})=>wm.focusWindow(win));
+    restore.filter(({win,maximized})=>maximized&&!win.classList.contains('maximized')).forEach(({win})=>wm.toggleMaximize(win));
+    desktopHidden.delete(workspace);
+  }else{
+    const windows=wm.getWindows()
+      .filter(win=>Number(win.dataset.workspace)===workspace&&!win.classList.contains('minimized'))
+      .sort((a,b)=>Number(a.style.zIndex)-Number(b.style.zIndex))
+      .map(win=>({win,maximized:win.classList.contains('maximized')}));
+    desktopHidden.set(workspace,windows);
+    windows.forEach(({win})=>wm.minimizeWindow(win));
+  }
+};
 
 document.querySelector('#desktop').addEventListener('contextmenu',e=>{if(e.target.closest('.window,.launcher,.panel,.quick-settings'))return;e.preventDefault();hidePopovers();contextMenu.innerHTML=[['terminal','terminal','Öppna terminal'],['files','files','Öppna hemmappen'],['settings','settings','Anpassa skrivbordet'],['discover','packages','Installera paket'],['welcome','linux','Välkommen till flinux']].map(([id,i,label])=>`<button role="menuitem" data-open="${id}">${icon(i)}${label}</button>`).join('');contextMenu.hidden=false;contextMenu.style.left=`${Math.max(4,Math.min(e.clientX,innerWidth-254))}px`;contextMenu.style.top=`${Math.max(4,Math.min(e.clientY,innerHeight-260))}px`;contextMenu.querySelectorAll('button').forEach(b=>b.onclick=()=>openApp(b.dataset.open));contextMenu.querySelector('button').focus();});
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#launcher,#launcher-button,#tray-button,#quick-settings,#context-menu'))hidePopovers();});

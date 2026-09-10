@@ -42,10 +42,12 @@ test('sudo user management and permissions affect actual shell access', () => {
 
 test('Apache reads web files as www-data', () => {
   const { shell } = setup();
-  ok(shell, 'sudo apt install apache2');
+  ok(shell, 'sudo apt install apache2 curl');
   ok(shell, 'sudo systemctl start apache2');
   ok(shell, 'sudo chmod 600 /var/www/html/index.html');
-  assert.equal(shell.execute('curl localhost').code, 1);
+  const denied = shell.execute('curl localhost');
+  assert.equal(denied.code, 1);
+  assert.match(denied.stderr, /Permission denied/);
   ok(shell, 'sudo chmod 604 /var/www/html/index.html');
   assert.match(ok(shell, 'curl localhost'), /Det glada linuxet/);
 });
@@ -60,7 +62,7 @@ test('virtual network distinguishes IP reachability from DNS', () => {
   assert.equal(failed.code, 2);
   assert.match(failed.stderr, /name resolution/);
   ok(shell, 'echo nameserver 192.168.1.1 > /etc/resolv.conf');
-  assert.match(ok(shell, 'ping server'), /192\\.168\\.1\\.20/);
+  assert.match(ok(shell, 'ping server'), /192\.168\.1\.20/);
   ok(shell, 'sudo chmod 644 /etc/resolv.conf');
 });
 

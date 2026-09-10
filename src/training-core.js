@@ -52,17 +52,19 @@ const DEFAULT_GROUPS = {
 };
 
 function ensureDir(system, path, mode = '755') {
-  if (!system.getNode(path)) system.mkdir(path);
-  const node = system.getNode(path);
-  if (node?.type === 'dir') node.mode = mode;
-  return node;
+  if (!system.getNode(path)) {
+    system.mkdir(path);
+    Object.assign(system.getNode(path), { mode, owner: 'root', group: 'root' });
+  }
+  return system.getNode(path);
 }
 
 function ensureFile(system, path, content = '', mode = '644') {
-  if (!system.getNode(path)) system.writeFile(path, content);
-  const node = system.getNode(path);
-  if (node?.type === 'file') node.mode = mode;
-  return node;
+  if (!system.getNode(path)) {
+    system.writeFile(path, content);
+    Object.assign(system.getNode(path), { mode, owner: 'root', group: 'root' });
+  }
+  return system.getNode(path);
 }
 
 function defaultOwnerForPath(path) {
@@ -96,7 +98,8 @@ function syncAccountFiles(system, state) {
 }
 
 function initialize(system) {
-  if (!system.state.training || system.state.training.version !== 1) {
+  const firstInitialization = !system.state.training || system.state.training.version !== 1;
+  if (firstInitialization) {
     system.state.training = {
       version: 1,
       users: clone(DEFAULT_USERS),
@@ -124,14 +127,14 @@ function initialize(system) {
   for (const [name, user] of Object.entries(DEFAULT_USERS)) state.users[name] ||= clone(user);
   for (const [name, group] of Object.entries(DEFAULT_GROUPS)) state.groups[name] ||= clone(group);
 
-  for (const path of ['/root', '/proc', '/dev', '/mnt', '/run', '/opt']) ensureDir(system, path);
+  ensureDir(system, '/root', '700');
+  for (const path of ['/proc', '/dev', '/mnt', '/run', '/opt']) ensureDir(system, path);
   ensureFile(system, '/proc/cpuinfo', 'processor\t: 0\nmodel name\t: flinux Virtual CPU\ncpu cores\t: 2\n', '444');
   ensureFile(system, '/proc/meminfo', 'MemTotal:        2097152 kB\nMemFree:         1572864 kB\n', '444');
   ensureFile(system, '/etc/hostname', system.state.user.host + '\n');
   ensureFile(system, '/etc/hosts', '127.0.0.1 localhost\n192.168.1.10 flinux\n192.168.1.20 server\n192.168.1.30 nas\n');
   ensureFile(system, '/etc/resolv.conf', `nameserver ${state.network.dns || ''}\n`);
-  const root = system.getNode('/root'); if (root) root.mode = '700';
-  const tmp = system.getNode('/tmp'); if (tmp) tmp.mode = '777';
+  const tmp = system.getNode('/tmp'); if (tmp && firstInitialization) tmp.mode = '777';
 
   walk(system, '/', (node, path) => {
     if (!node.owner || !node.group) {
@@ -152,9 +155,12 @@ function modeDigit(node, user, groups) {
 }
 
 export function createTrainingCore(system) {
-  const state = initialize(system);
-  const userRecord = name => state.users[name] || null;
+  initialize(system);
+  // Imports replace system.state; existing terminals and lab windows must follow it.
+  const getState = () => system.state.training || initialize(system);
+  const userRecord = name => getState().users[name] || null;
   const groupsFor = name => {
+    const state = getState();
     const user = userRecord(name); if (!user) return [];
     return [...new Set([...(user.groups || []), ...Object.values(state.groups).filter(g => g.members.includes(name)).map(g => g.name)])];
   };
@@ -170,6 +176,7 @@ export function createTrainingCore(system) {
   }
   function assertTraverse(path, username) {
     const normalized = system.normalize(path);
+    if (!can('/', username, 'execute')) throw new Error(`${path}: Permission denied`);
     const parts = normalized.split('/').filter(Boolean);
     let current = '';
     for (const part of parts.slice(0, -1)) {
@@ -216,19 +223,42 @@ export function createTrainingCore(system) {
   }
   function copy(source, destination, username, move = false) {
     const sourcePath = system.normalize(source); assertTraverse(sourcePath, username);
-    if (!can(sourcePath, username, 'read')) throw new Error(`${source}: Permission denied`);
+    const sourceNode = system.getNode(sourcePath);
+    if (!sourceNode) throw new Error(`${source}: Filen eller katalogen finns inte`);
     let target = system.normalize(destination);
     if (system.getNode(target)?.type === 'dir') target = system.normalize(target + '/' + sourcePath.split('/').pop());
-    parentWritable(target, username);
-    return move ? system.move(sourcePath, destination) : system.copy(sourcePath, destination);
+    if (move) {
+      parentWritable(sourcePath, username);
+      parentWritable(target, username);
+      return system.move(sourcePath, destination);
+    }
+    walk(system, sourcePath, (node, path) => {
+      assertTraverse(path, username);
+      if (!can(path, username, 'read') || (node.type === 'dir' && !can(path, username, 'execute'))) throw new Error(`${path}: Permission denied`);
+    });
+    const existing = system.getNode(target);
+    if (existing) {
+      assertTraverse(target, username);
+      if (!can(target, username, 'write')) throw new Error(`${target}: Permission denied`);
+    } else parentWritable(target, username);
+    const copied = system.copy(sourcePath, destination);
+    walk(system, copied, node => {
+      node.owner = username;
+      node.group = groupsFor(username).find(group => group !== 'sudo') || username;
+    });
+    if (existing) Object.assign(system.getNode(copied), { owner: existing.owner, group: existing.group, mode: existing.mode });
+    system.save();
+    return copied;
   }
   function chmod(path, mode, username) {
     const normalized = system.normalize(path), node = system.getNode(normalized);
+    assertTraverse(normalized, username);
     if (!node) throw new Error('chmod: Filen finns inte');
     if (username !== 'root' && node.owner !== username) throw new Error('chmod: Operation not permitted');
     system.chmod(normalized, mode);
   }
   function chown(path, owner, group, username) {
+    const state = getState();
     requireRoot(username, 'chown');
     requireUser(owner);
     if (group && !state.groups[group]) throw new Error(`chown: gruppen '${group}' finns inte`);
@@ -236,6 +266,8 @@ export function createTrainingCore(system) {
     node.owner = owner; if (group) node.group = group; node.modified = system.now(); system.save();
   }
   function chgrp(path, group, username) {
+    const state = getState();
+    assertTraverse(path, username);
     if (!state.groups[group]) throw new Error(`chgrp: gruppen '${group}' finns inte`);
     const node = system.getNode(path); if (!node) throw new Error('chgrp: Filen finns inte');
     if (username !== 'root' && (node.owner !== username || !groupsFor(username).includes(group))) throw new Error('chgrp: Operation not permitted');
@@ -243,6 +275,7 @@ export function createTrainingCore(system) {
   }
 
   function addUser(name, { sudo = false, createHome = true } = {}) {
+    const state = getState();
     if (!/^[a-z_][a-z0-9_-]{0,30}$/.test(name)) throw new Error('useradd: ogiltigt användarnamn');
     if (state.users[name]) throw new Error(`useradd: användaren '${name}' finns redan`);
     const uid = state.nextUid++, gid = state.nextGid++;
@@ -259,6 +292,7 @@ export function createTrainingCore(system) {
     syncAccountFiles(system, state); system.save(); return state.users[name];
   }
   function deleteUser(name, removeHome = false) {
+    const state = getState();
     if (['root', 'jarl', 'www-data'].includes(name)) throw new Error('userdel: den användaren är skyddad');
     requireUser(name);
     for (const group of Object.values(state.groups)) group.members = group.members.filter(member => member !== name);
@@ -267,6 +301,7 @@ export function createTrainingCore(system) {
     syncAccountFiles(system, state); system.save();
   }
   function addToGroup(name, group) {
+    const state = getState();
     const user = requireUser(name); const target = state.groups[group]; if (!target) throw new Error(`usermod: gruppen '${group}' finns inte`);
     if (!target.members.includes(name)) target.members.push(name);
     if (!user.groups.includes(group)) user.groups.push(group);
@@ -274,6 +309,7 @@ export function createTrainingCore(system) {
   }
   function isSudoer(name) { return name === 'root' || groupsFor(name).includes('sudo'); }
   function idText(name) {
+    const state = getState();
     const user = requireUser(name), groupNames = groupsFor(name);
     const primary = Object.values(state.groups).find(group => group.gid === user.gid)?.name || name;
     const groupText = groupNames.map(groupName => {
@@ -283,6 +319,7 @@ export function createTrainingCore(system) {
   }
 
   function listProcesses() {
+    const state = getState();
     const base = [
       { pid: 1, ppid: 0, user: 'root', state: 'S', command: 'flinux-core' },
       { pid: 12, ppid: 1, user: 'jarl', state: 'S', command: system.state.settings.desktop + '-desktop' }
@@ -293,10 +330,12 @@ export function createTrainingCore(system) {
     return [...base, ...services, ...state.processes];
   }
   function spawnProcess(command, user = 'jarl') {
+    const state = getState();
     const process = { pid: state.nextPid++, ppid: 1, user, state: 'S', command: String(command).slice(0, 120) };
     state.processes.push(process); system.save(); return process;
   }
   function kill(pid, username) {
+    const state = getState();
     pid = Number(pid);
     const process = listProcesses().find(entry => entry.pid === pid); if (!process) throw new Error(`kill: (${pid}) - No such process`);
     if (pid <= 40) throw new Error('kill: den processen hanteras av systemet/tjänstehanteraren');
@@ -305,26 +344,36 @@ export function createTrainingCore(system) {
   }
 
   function resolveHost(host) {
+    const state = getState();
     if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return host;
     if (!state.network.dns) return null;
     return state.network.hosts[host] || null;
   }
   function setDns(value) {
+    const state = getState();
     state.network.dns = value;
     system.writeFile('/etc/resolv.conf', value ? `nameserver ${value}\n` : '');
     const node = system.getNode('/etc/resolv.conf'); if (node) { node.owner = 'root'; node.group = 'root'; node.mode = '644'; }
     system.save();
   }
-  function syncDnsFromFile() {
+  function dnsFromFile() {
     const node = system.getNode('/etc/resolv.conf');
     const match = node?.type === 'file' ? node.content.match(/^\s*nameserver\s+(\S+)/m) : null;
-    state.network.dns = match?.[1] || '';
-    system.save();
+    return match?.[1] || '';
+  }
+  function syncDnsFromFile() {
+    const state = getState();
+    const dns = dnsFromFile();
+    if (state.network.dns !== dns) {
+      state.network.dns = dns;
+      system.save();
+    }
   }
   function ipAddressText() {
+    const state = getState();
     return `1: lo: <LOOPBACK,UP> mtu 65536\n    inet 127.0.0.1/8 scope host lo\n2: ${state.network.interface}: <BROADCAST,MULTICAST,UP> mtu 1500\n    inet ${state.network.address} brd 192.168.1.255 scope global ${state.network.interface}\n`;
   }
-  function routeText() { return `default via ${state.network.gateway} dev ${state.network.interface}\n192.168.1.0/24 dev ${state.network.interface} proto kernel scope link src ${state.network.address.split('/')[0]}\n`; }
+  function routeText() { const state = getState(); return `default via ${state.network.gateway} dev ${state.network.interface}\n192.168.1.0/24 dev ${state.network.interface} proto kernel scope link src ${state.network.address.split('/')[0]}\n`; }
   function socketText() {
     const rows = ['Netid State  Local Address:Port  Process'];
     if (system.state.services?.apache2?.active) rows.push('tcp   LISTEN 0.0.0.0:80          apache2');
@@ -337,6 +386,7 @@ export function createTrainingCore(system) {
     return JSON.stringify(copy);
   }
   function startLab(id) {
+    const state = getState();
     const scenario = LAB_SCENARIOS.find(item => item.id === id); if (!scenario) throw new Error('Okänd labb');
     if (!state.labSnapshot) state.labSnapshot = snapshotState();
     state.activeLab = id;
@@ -358,24 +408,26 @@ export function createTrainingCore(system) {
     return scenario;
   }
   function checkLab() {
+    const state = getState();
     const id = state.activeLab; if (!id) return { ok: false, message: 'Ingen labb är startad.' };
     let ok = false, detail = '';
     if (id === 'filesystem') {
       const node = system.getNode('/home/jarl/lab/answer.txt');
       ok = node?.type === 'file' && /flinux/i.test(node.content); detail = ok ? 'Katalog och fil är korrekta.' : 'Kontrollerar ~/lab/answer.txt och dess innehåll.';
     } else if (id === 'permissions') {
-      const node = system.getNode('/var/www/html/index.html');
-      ok = Boolean(node && (Number(node.mode?.[2] || 0) & 4)); detail = ok ? 'www-data kan nu läsa index.html.' : 'Övriga användare behöver läsrättighet till index.html.';
+      try { read('/var/www/html/index.html', 'www-data'); ok = true; } catch { ok = false; }
+      detail = ok ? 'www-data kan nu läsa index.html.' : 'www-data behöver läsrättighet till index.html och åtkomst genom dess kataloger.';
     } else if (id === 'users') {
       ok = Boolean(state.users.anna && groupsFor('anna').includes('sudo') && system.getNode('/home/anna')); detail = ok ? 'anna finns, har hemkatalog och sudo.' : 'Kontrollerar användaren anna, /home/anna och gruppen sudo.';
     } else if (id === 'service') {
       ok = Boolean(system.state.services?.apache2?.active); detail = ok ? 'apache2 är active (running).' : 'apache2 är fortfarande inte aktiv.';
     } else if (id === 'dns') {
-      syncDnsFromFile(); ok = Boolean(state.network.dns); detail = ok ? `DNS är konfigurerad till ${state.network.dns}.` : 'Ingen nameserver hittades i /etc/resolv.conf.';
+      const dns = dnsFromFile(); ok = Boolean(dns); detail = ok ? `DNS är konfigurerad till ${dns}.` : 'Ingen nameserver hittades i /etc/resolv.conf.';
     }
     return { ok, message: detail };
   }
   function resetLab() {
+    const state = getState();
     if (!state.labSnapshot) return false;
     const restored = JSON.parse(state.labSnapshot);
     restored.training.labSnapshot = null;
@@ -392,7 +444,7 @@ export function createTrainingCore(system) {
   }
 
   return {
-    state,
+    get state() { return getState(); },
     labs: LAB_SCENARIOS,
     user: userRecord,
     groupsFor,
@@ -403,6 +455,8 @@ export function createTrainingCore(system) {
     deleteUser,
     addToGroup,
     can,
+    assertTraverse,
+    parentWritable,
     read,
     writeFile,
     mkdir,

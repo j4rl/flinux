@@ -196,6 +196,7 @@ export function createCreativeApps({ system, toast }) {
         button.onclick = () => reveal(index);
         button.oncontextmenu = event => { event.preventDefault(); flag(index); };
         button.onkeydown = event => {
+          if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
           if (event.key.toLowerCase() === 'f') { event.preventDefault(); flag(index); }
           const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols };
           if (event.key in offsets) {

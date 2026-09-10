@@ -3,7 +3,9 @@ import {esc, icon, WALLPAPERS, DESKTOPS, download} from './ui.js';
 // A deliberately small, escaped Markdown renderer; documents never execute HTML.
 function markdown(text) {
   let inCode=false;
-  const inline=line=>esc(line).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>');
+  const inline=line=>esc(line).split(/(`[^`]+`)/g).map((part,index)=>index%2
+    ? `<code>${part.slice(1,-1)}</code>`
+    : part.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\*([^*]+)\*/g,'<em>$1</em>')).join('');
   return String(text).split('\n').map(line=>{
     if(line.startsWith('```')){inCode=!inCode;return inCode?'<pre><code>':'</code></pre>';}
     if(inCode)return esc(line)+'\n';
@@ -64,7 +66,7 @@ export function createExtraApps({system, PACKAGE_REGISTRY, toast, applySettings}
     function draw(){ctx.fillStyle='#0c2224';ctx.fillRect(0,0,400,400);ctx.fillStyle='#173234';for(let y=0;y<20;y++)for(let x=0;x<20;x++)ctx.fillRect(x*20+9,y*20+9,2,2);ctx.fillStyle='#eeaf96';ctx.beginPath();ctx.arc(food.x*20+10,food.y*20+10,6,0,Math.PI*2);ctx.fill();snake.forEach((p,i)=>{ctx.fillStyle=i?'#70b69f':'#cbe9a2';ctx.fillRect(p.x*20+2,p.y*20+2,16,16);});root.querySelector('[data-score]').textContent=score;}
     function start(){snake=[{x:8,y:10},{x:7,y:10},{x:6,y:10}];direction={x:1,y:0};next=direction;score=0;ended=false;paused=false;status.textContent='Piltangenter / WASD · Mellanslag pausar';placeFood();draw();canvas.focus();}
     const steer=dir=>{const d={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}}[dir];if(d&&(d.x!==-direction.x||d.y!==-direction.y))next=d;};
-    root.querySelectorAll('[data-direction]').forEach(b=>b.onclick=()=>{steer(b.dataset.direction);canvas.focus();});canvas.onkeydown=e=>{const dir={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'}[e.key];if(dir){e.preventDefault();steer(dir);}if(e.code==='Space'){e.preventDefault();paused=!paused;status.textContent=paused?'Pausad. Mellanslag fortsätter.':'Piltangenter / WASD · Mellanslag pausar';}};root.querySelector('[data-new]').onclick=start;
+    root.querySelectorAll('[data-direction]').forEach(b=>b.onclick=()=>{steer(b.dataset.direction);canvas.focus();});canvas.onkeydown=e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||ended)return;const dir={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'}[e.key];if(dir){e.preventDefault();steer(dir);}if(e.code==='Space'){e.preventDefault();paused=!paused;status.textContent=paused?'Pausad. Mellanslag fortsätter.':'Piltangenter / WASD · Mellanslag pausar';}};root.querySelector('[data-new]').onclick=start;
     const timer=setInterval(()=>{if(ended||paused||root.closest('.window')?.hidden||!root.closest('.window')?.classList.contains('focused'))return;direction=next;const head={x:snake[0].x+direction.x,y:snake[0].y+direction.y},eat=head.x===food.x&&head.y===food.y,body=eat?snake:snake.slice(0,-1);if(head.x<0||head.x>=20||head.y<0||head.y>=20||body.some(p=>p.x===head.x&&p.y===head.y)){ended=true;status.textContent=`Bra spelat! ${score} poäng. Prova en gång till?`;return;}snake.unshift(head);if(eat){score+=10;placeFood();}else snake.pop();draw();},130);start();return()=>clearInterval(timer);
   }
   return {renderMarkdown,renderImages,renderClock,renderSysinfo,renderSnake};
